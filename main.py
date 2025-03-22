@@ -1,5 +1,7 @@
 import requests
 import pygame
+import sys
+import os
 
 
 def main():
@@ -7,9 +9,11 @@ def main():
     pygame.init()
     size = width, height = 1200, 800
     screen = pygame.display.set_mode(size)
-    pygame.display.set_caption('yandexmaps v1.2')
+    pygame.display.set_caption('yandexmaps v1.3')
     running = True
     textpos = 0
+    error = False
+    map = ''
 
     coordinates = "__.______, ___.______"
 
@@ -22,8 +26,13 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                coordinates, textpos = button_click(event.pos, coordinates, textpos)
-                texts(coordinates)
+                coordinates, textpos, error, map = button_click(event.pos, coordinates, textpos)
+                texts(coordinates, error)
+
+                if len(str(map)) > 1:
+                    screen.fill((0, 0, 0))
+                    screen.blit(map, (100, 100))
+                pygame.display.flip()
 
         pygame.display.flip()
 
@@ -32,7 +41,7 @@ def main():
     pygame.quit()
 
 
-def texts(coordinates):
+def texts(coordinates, errorflag=False):
     screen.fill((0, 0, 0))
 
     font = pygame.font.Font(None, 70)
@@ -60,32 +69,101 @@ def texts(coordinates):
         text_h = text.get_height()
         pygame.draw.rect(screen, (100, 200, 100), (text_x + text_w // 2 - 20, text_y + text_h // 2 - 20, 40, 40), 1)
 
+    if errorflag:
+        font = pygame.font.Font(None, 40)
+        text = font.render("ошибка: координаты не введены полностью", True, (255, 50, 50))
+        text_x, text_y = 100, 500
+        screen.blit(text, (text_x, text_y))
+
 
 def button_click(pos, coordinates, textpos):
-    coordinates0 = coordinates
+    error = False
+    mapp = ''
+    a = [0, 0]
+    if coordinates[0] == '-':
+        a[0] = 1
+    if coordinates[9 + a[0] + 2] == '-':
+        a[1] = 1
+    # coordinates0 = coordinates
     button = (pos[0] - 85) // 45
+    if 100 <= pos[0] <= 500 and 700 <= pos[1] <= 750:
+        # print(coordinates.count("_"))
+        if coordinates.count("_") == 0:
+            mapp = map_render(coordinates)
+            return coordinates, textpos, error, mapp
+        else:
+            error = True
     if 0 <= button <= 10 and 300 <= pos[1] <= 340:
         coordinates = coordinates.replace(", ", "")
         coordinates = coordinates.replace(".", "")
         coordinates = list(coordinates)
         if button != 0:
-            coordinates[textpos] = str(button - 1)
-            if textpos != 16:
+            if textpos <= len(coordinates) - 1:
+                # print(textpos + sum(a))
+                coordinates[textpos] = str(button - 1)
                 textpos += 1
+            if coordinates[a[0]] == "9" and textpos == 1 + a[0]:
+                for i in range(1, 8):
+                    coordinates[i + a[0]] = "0"
+                    textpos += 1
+            if coordinates[8 + sum(a)] != "0":
+                if ((coordinates[8 + sum(a)] != "1" or
+                        (coordinates[8 + sum(a)] == "1" and coordinates[9 + sum(a)] == "9")) and
+                        coordinates[8 + sum(a)] != "_"):
+                    coordinates[8 + sum(a)] = "1"
+                    coordinates[9 + sum(a)] = "8"
+                if coordinates[8 + sum(a)] == "1" and coordinates[9 + sum(a)] == "8":
+                    for i in range(10, 17):
+                        coordinates[i + sum(a)] = "0"
+                        textpos += 1
+        elif button == 0:
+            if textpos == 0 or textpos == 8 + a[0]:
+                coordinates[textpos] = "-" + coordinates[textpos]
+                if textpos != 16 + sum(a):
+                    textpos += 1
         else:
             pass
-        coordinates = ''.join(coordinates)
-        coordinates0 = coordinates[:2] + "." + coordinates[2:8] + ", " + coordinates[8:11] + "." + coordinates[11:]
-    return coordinates0, textpos
+        # coordinates = ''.join(coordinates)
+        coordinates0 = [''.join(coordinates[:2 + a[0]]), ".", ''.join(coordinates[2 + a[0]:8 + a[0]]), ", ",
+                        ''.join(coordinates[8 + a[0]:11 + sum(a)]), ".", ''.join(coordinates[11 + sum(a):])]
+        coordinates = ''.join(coordinates0)
+    # print(coordinates, textpos, textpos + a[0], textpos + sum(a))
+    return coordinates, textpos, error, mapp
 
 
 def map_render(coordinates):
-    server_address = 'https://static-maps.yandex.ru/v1'
+    coordinates = coordinates.split(', ')
+    print(coordinates)
+    coordinates = ','.join([str(float(coordinates[0])), str(float(coordinates[1]))])
+    server_address = 'https://static-maps.yandex.ru/v1?'
     # server_address = 'http://geocode-maps.yandex.ru/1.x/?'
-    api_key = '40d1649f-0493-4b70-98ba-98533de7710b'
-    spn = 0.05, 0.03
-    geocoder_request = f'{server_address}ll={coordinates}&spn={spn}apikey={api_key}'
-    response = requests.get(geocoder_request)
+    api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13' # '40d1649f-0493-4b70-98ba-98533de7710b'
+    spn = '0.100001,0.060001'
+    map_request = f'{server_address}ll={coordinates.replace(' ', '')}&spn={spn}&apikey={api_key}'
+    response = requests.get(map_request)
+
+    if not response:
+        print("Ошибка выполнения запроса:")
+        print(map_request)
+        print("Http статус:", response.status_code, "(", response.reason, ")")
+        # sys.exit(1)
+
+    pygame.init()
+    map_file = 'map.png'
+    with open(map_file, "wb") as file:
+        file.write(response.content)
+    mapp = load_image(map_file)
+    # map1 = pygame.transform.scale(map, (1000, 600))
+    return mapp
+
+
+def load_image(name, colorkey=None):
+    fullname = os.path.join(name)
+    if not os.path.isfile(fullname):
+        print(f"Файл с изображением '{fullname}' не найден")
+        sys.exit()
+    image = pygame.image.load(fullname)
+    return image
 
 
 if __name__ == "__main__":
