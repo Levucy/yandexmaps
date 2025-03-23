@@ -134,7 +134,7 @@ def button_click(pos, coordinates, textpos):
 def map_render(coordinates):
     coordinates = coordinates.split(', ')
     print(coordinates)
-    coordinates = ','.join([str(float(coordinates[0])), str(float(coordinates[1]))])
+    coordinates = ','.join([str(float(coordinates[1])), str(float(coordinates[0]))])
     server_address = 'https://static-maps.yandex.ru/v1?'
     # server_address = 'http://geocode-maps.yandex.ru/1.x/?'
     api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13' # '40d1649f-0493-4b70-98ba-98533de7710b'
