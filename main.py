@@ -14,6 +14,7 @@ def main():
     textpos = 0
     error = False
     map = ''
+    ismap = False
 
     coordinates = "__.______, ___.______"
 
@@ -25,8 +26,8 @@ def main():
 
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                coordinates, textpos, error, map = button_click(event.pos, coordinates, textpos)
+            if event.type == pygame.MOUSEBUTTONDOWN and not ismap:
+                coordinates, textpos, error, map, ismap = button_click(event.pos, coordinates, textpos)
                 texts(coordinates, error)
 
                 if len(str(map)) > 1:
@@ -78,6 +79,7 @@ def texts(coordinates, errorflag=False):
 
 def button_click(pos, coordinates, textpos):
     error = False
+    ismap = False
     mapp = ''
     a = [0, 0]
     if coordinates[0] == '-':
@@ -89,8 +91,8 @@ def button_click(pos, coordinates, textpos):
     if 100 <= pos[0] <= 500 and 700 <= pos[1] <= 750:
         # print(coordinates.count("_"))
         if coordinates.count("_") == 0:
-            mapp = map_render(coordinates)
-            return coordinates, textpos, error, mapp
+            mapp, ismap = map_render(coordinates)
+            return coordinates, textpos, error, mapp, ismap
         else:
             error = True
     if 0 <= button <= 10 and 300 <= pos[1] <= 340:
@@ -128,7 +130,7 @@ def button_click(pos, coordinates, textpos):
                         ''.join(coordinates[8 + a[0]:11 + sum(a)]), ".", ''.join(coordinates[11 + sum(a):])]
         coordinates = ''.join(coordinates0)
     # print(coordinates, textpos, textpos + a[0], textpos + sum(a))
-    return coordinates, textpos, error, mapp
+    return coordinates, textpos, error, mapp, ismap
 
 
 def map_render(coordinates):
@@ -154,7 +156,7 @@ def map_render(coordinates):
         file.write(response.content)
     mapp = load_image(map_file)
     # map1 = pygame.transform.scale(map, (1000, 600))
-    return mapp
+    return mapp, True
 
 
 def load_image(name, colorkey=None):
