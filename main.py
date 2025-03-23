@@ -9,12 +9,13 @@ def main():
     pygame.init()
     size = width, height = 1200, 800
     screen = pygame.display.set_mode(size)
-    pygame.display.set_caption('yandexmaps v1.3')
+    pygame.display.set_caption('yandexmaps v2.0')
     running = True
     textpos = 0
     error = False
     map = ''
     ismap = False
+    span = '0.100001,0.100001'
 
     coordinates = "__.______, ___.______"
 
@@ -26,6 +27,25 @@ def main():
 
             if event.type == pygame.QUIT:
                 running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == 1073741899:
+                    span = ','.join([str(float(span.split(',')[0]) / 2), str(float(span.split(',')[1]) / 2)])
+                    map, ismap = map_render(coordinates, span)
+
+                    if len(str(map)) > 1:
+                        screen.fill((0, 0, 0))
+                        screen.blit(map, (100, 100))
+                    pygame.display.flip()
+
+                if event.key == 1073741902:
+                    span = ','.join([str(float(span.split(',')[0]) * 2), str(float(span.split(',')[1]) * 2)])
+                    map, ismap = map_render(coordinates, span)
+
+                    if len(str(map)) > 1:
+                        screen.fill((0, 0, 0))
+                        screen.blit(map, (100, 100))
+                    pygame.display.flip()
+
             if event.type == pygame.MOUSEBUTTONDOWN and not ismap:
                 coordinates, textpos, error, map, ismap = button_click(event.pos, coordinates, textpos)
                 texts(coordinates, error)
@@ -78,6 +98,7 @@ def texts(coordinates, errorflag=False):
 
 
 def button_click(pos, coordinates, textpos):
+    span = '0.100001,0.100001'
     error = False
     ismap = False
     mapp = ''
@@ -91,7 +112,7 @@ def button_click(pos, coordinates, textpos):
     if 100 <= pos[0] <= 500 and 700 <= pos[1] <= 750:
         # print(coordinates.count("_"))
         if coordinates.count("_") == 0:
-            mapp, ismap = map_render(coordinates)
+            mapp, ismap = map_render(coordinates, span)
             return coordinates, textpos, error, mapp, ismap
         else:
             error = True
@@ -133,15 +154,16 @@ def button_click(pos, coordinates, textpos):
     return coordinates, textpos, error, mapp, ismap
 
 
-def map_render(coordinates):
+def map_render(coordinates, span):
     coordinates = coordinates.split(', ')
     print(coordinates)
     coordinates = ','.join([str(float(coordinates[1])), str(float(coordinates[0]))])
     server_address = 'https://static-maps.yandex.ru/v1?'
     # server_address = 'http://geocode-maps.yandex.ru/1.x/?'
     api_key = 'f3a0fe3a-b07e-4840-a1da-06f18b2ddf13' # '40d1649f-0493-4b70-98ba-98533de7710b'
-    spn = '0.100001,0.060001'
+    spn = span
     map_request = f'{server_address}ll={coordinates.replace(' ', '')}&spn={spn}&apikey={api_key}'
+    print(map_request)
     response = requests.get(map_request)
 
     if not response:
@@ -156,6 +178,7 @@ def map_render(coordinates):
         file.write(response.content)
     mapp = load_image(map_file)
     # map1 = pygame.transform.scale(map, (1000, 600))
+    print(spn)
     return mapp, True
 
 
